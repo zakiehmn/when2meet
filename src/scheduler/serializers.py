@@ -2,7 +2,7 @@ from rest_framework import serializers
 from scheduler.models import Event
 
 class EventSerializer(serializers.ModelSerializer):
-    class meta:
+    class Meta:
         model = Event
         fields = ['id', 'name', 'start_date', 'end_date', 'start_time', 'end_time', 'timezone']
 
