@@ -4,20 +4,20 @@ import pytz
 
 class Event(models.Model):
     name = models.CharField(max_length=50)
-    start_date = models.DateField()
-    end_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in pytz.all_timezones], default="UTC")
 
-    def clean(self):
-        if self.start_date > self.end_date:
-            raise ValidationError("Start date must be before end date.")
-        if self.start_time >= self.end_time:
-            raise ValidationError("Start time must be before end time.")
-
     def __str__(self):
         return self.name
+
+
+class EventDate(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="dates")
+    date = models.DateField()
+
+    def __str__(self):
+        return f"{self.event.name} - {self.date}"
 
 
 class Attendee(models.Model):
