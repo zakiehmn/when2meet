@@ -12,8 +12,11 @@ class CreateEventView(APIView):
     def post(self, request):
         serializer = EventSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            event = serializer.save()
+            return Response({
+                'message': 'Event created successfully!',
+                'event_link': event.event_link
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

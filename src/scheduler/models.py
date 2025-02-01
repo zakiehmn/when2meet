@@ -1,12 +1,21 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 import pytz
+import uuid
 
 class Event(models.Model):
     name = models.CharField(max_length=50)
     start_time = models.TimeField()
     end_time = models.TimeField()
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in pytz.all_timezones], default="UTC")
+    event_link = models.URLField(max_length=200)
+
+    def save(self, *args, **kwargs):
+        if not self.event_link:
+            unique_id = uuid.uuid4()
+            # TODO: change link
+            self.event_link = f"http://127.0.0.1:8000/?{unique_id}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
