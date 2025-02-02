@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from scheduler.models import Event, EventDate
+from scheduler.models import Event, EventDate, Attendee, Availability
 
 
 class EventDateSerializer(serializers.ModelSerializer):
@@ -27,6 +27,15 @@ class EventSerializer(serializers.ModelSerializer):
             EventDate.objects.create(event=event, **date)
         return event
 
+class AvailibilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Availability
+        fields = ['start_time', 'end_time']
 
 
+class AttendeeSerializer(serializers.ModelSerializer):
+    availibility_times = AvailibilitySerializer(many=True, read_only=True)
+    class Meta:
+        model = Attendee
+        fields = ['name', 'availibility_times']
 
