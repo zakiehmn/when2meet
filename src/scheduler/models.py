@@ -8,14 +8,10 @@ class Event(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in pytz.all_timezones], default="UTC")
-    event_link = models.URLField(max_length=200)
+    unique_id = models.UUIDField(default=uuid.uuid4, unique=True)
 
-    def save(self, *args, **kwargs):
-        if not self.event_link:
-            unique_id = uuid.uuid4()
-            # TODO: change link
-            self.event_link = f"http://127.0.0.1:8000/?{unique_id}"
-        super().save(*args, **kwargs)
+    def get_event_link(self):
+        return f"http://127.0.0.1:8000/{self.unique_id}"
 
     def __str__(self):
         return self.name
