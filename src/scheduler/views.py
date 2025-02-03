@@ -10,6 +10,9 @@ from scheduler.utils import(
     get_event_by_unique_id,
     get_attendee_by_event_and_name,
     create_attendee,
+    get_attendee_by_id,
+    create_avalibility,
+    get_existing_availibility,
 )
 
 
@@ -63,3 +66,49 @@ class SignInEventView(APIView):
         return Response({"message": "Sign up successful!",
                          "attendee": serializer.data
                          }, status=status.HTTP_201_CREATED)
+
+
+class AttendeeAvailibilityView(APIView):
+    def post(self, request, unique_id, attendee_id):
+        event = get_event_by_unique_id(unique_id)
+        attendee = get_attendee_by_id(event, attendee_id)
+
+        start_time_str = request.data.get("start_time")
+        end_time_str = request.data.get("end_time")
+
+        if not start_time_str or not end_time_str:
+            return Response({"error": "Start time and end time are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            start_time = datetime.fromisoformat(start_time_str)
+            end_time = datetime.fromisoformat(end_time_str)
+        except ValueError:
+            return Response({"error": "Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)."})
+
+        if end_time <= start_time:
+            return Response({"error": "End time must be after start time."},
+                             status=status.HTTP_400_BAD_REQUEST)
+
+        existing_availibility = get_existing_availibility(attendee, start_time, end_time)
+        if existing_availibility:
+            existing_availibility.delete()
+            return Response({"message": "Availibility successfully removed."}, status=status.HTTP_200_OK)
+
+        availibility = create_avalibility(attendee, start_time, end_time)
+
+        return Response({
+            "message": "Availability successfully added.",
+            "availibility": {
+                "id": availibility.id,
+                "start_time": availibility.start_time,
+                "end_time": availibility.end_time
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+
+
+
+
+
+

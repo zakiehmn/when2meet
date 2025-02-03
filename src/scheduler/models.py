@@ -40,6 +40,9 @@ class Availability(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['attendee', 'start_time'], name='unique_attendee_start_time')]
+
     def clean(self):
         if self.start_time >= self.end_time:
             raise ValidationError("Start time must be before end time.")

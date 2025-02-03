@@ -37,5 +37,5 @@ class AttendeeSerializer(serializers.ModelSerializer):
     availibility_times = AvailibilitySerializer(many=True, read_only=True)
     class Meta:
         model = Attendee
-        fields = ['name', 'availibility_times']
+        fields = ['id', 'name', 'availibility_times']
 
