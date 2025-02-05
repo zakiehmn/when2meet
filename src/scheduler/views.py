@@ -2,8 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from scheduler.serializers import EventSerializer, AttendeeSerializer
-from datetime import datetime, timedelta
-from scheduler.models import Event
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from scheduler.authentication import CustomJWTAuthentication
+from datetime import datetime
 import pytz
 
 from scheduler.utils import(
@@ -13,11 +15,28 @@ from scheduler.utils import(
     get_attendee_by_id,
     create_avalibility,
     get_existing_availibility,
+    get_jwt_token,
+    get_attendee_availibility,
+    get_event_availibilities,
 )
 
 
 
 class CreateEventView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+
+    def get_authenticators(self):
+        if self.request.method == "POST":
+            return []
+        return super().get_authenticators()
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [AllowAny()]
+        return super().get_permissions()
+
     def post(self, request):
         serializer = EventSerializer(data=request.data)
         if serializer.is_valid():
@@ -27,6 +46,37 @@ class CreateEventView(APIView):
                 'event_link': event.get_event_link()
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request, unique_id):
+        event = get_event_by_unique_id(unique_id)
+        if not event:
+            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        time_zones = pytz.all_timezones
+
+        attendee = request.user
+        attendee_availibilities = []
+
+        if attendee:
+            attendee_availibilities = get_attendee_availibility(attendee)
+
+        all_event_availabilities = get_event_availibilities(event)
+
+        return Response({
+            "timezone_options": time_zones,
+            "attendee_timezone": attendee.timezone if attendee else None,
+            "attendee_availibilities": [
+                {"id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
+                for avail in attendee_availibilities
+            ],
+            "all_event_availabilities": [
+                {"attendee": avail.attendee.name, "id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
+                for avail in all_event_availabilities
+            ]
+        })
+
+
+
 
 
 class EventOptionView(APIView):
@@ -45,33 +95,54 @@ class EventOptionView(APIView):
 
 
 class SignInEventView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+
     def post(self, request, unique_id):
         event = get_event_by_unique_id(unique_id)
+        if not event:
+            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
         name = request.data.get('name')
-        password = request.data.get('password', None)
+        password = request.data.get('password')
         timezone = request.data.get('timezone', event.timezone)
+
         attendee = get_attendee_by_event_and_name(event, name)
+        is_new = False
 
         if attendee:
-            if attendee.password and attendee.password != password:
-                return Response({"error": "Incorrect password."
-                                 }, status=status.HTTP_401_UNAUTHORIZED)
-            serializer = AttendeeSerializer(attendee)
-            return Response({"message": "Login successful!",
-                             "attendee": serializer.data
-                             }, status=status.HTTP_200_OK)
+            if password:
+                if not attendee.check_password(password):
+                    return Response({"error": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                if attendee.has_usable_password():
+                    return Response({"error": "Password required."}, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            attendee = create_attendee(event, name, password, timezone)
+            is_new = True
 
-        new_attendee = create_attendee(event, name, password, timezone)
-        serializer = AttendeeSerializer(new_attendee)
-        return Response({"message": "Sign up successful!",
-                         "attendee": serializer.data
-                         }, status=status.HTTP_201_CREATED)
+        tokens = get_jwt_token(attendee)
+        serializer = AttendeeSerializer(attendee)
+
+        return Response({
+            "message": "Sign up successful!" if is_new else "Login successful!",
+            "attendee": serializer.data,
+            **tokens,
+        }, status=status.HTTP_201_CREATED if is_new else status.HTTP_200_OK)
+
 
 
 class AttendeeAvailibilityView(APIView):
-    def post(self, request, unique_id, attendee_id):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, unique_id):
+        attendee = request.user
         event = get_event_by_unique_id(unique_id)
-        attendee = get_attendee_by_id(event, attendee_id)
+
+        if attendee.event != event:
+            return Response({"error": "You are not authorized to modify availability for this event."},
+                             status=status.HTTP_403_FORBIDDEN)
+
 
         start_time_str = request.data.get("start_time")
         end_time_str = request.data.get("end_time")
@@ -104,11 +175,4 @@ class AttendeeAvailibilityView(APIView):
                 "end_time": availibility.end_time
             }
         }, status=status.HTTP_201_CREATED)
-
-
-
-
-
-
-
 

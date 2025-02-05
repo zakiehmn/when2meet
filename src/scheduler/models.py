@@ -1,7 +1,11 @@
 from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
 import pytz
 import uuid
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from scheduler.managers import AttendeeManager
+
 
 class Event(models.Model):
     name = models.CharField(max_length=50)
@@ -25,11 +29,23 @@ class EventDate(models.Model):
         return f"{self.event.name} - {self.date}"
 
 
-class Attendee(models.Model):
+class Attendee(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=30)
-    password = models.CharField(max_length=128, null=True)
+    password = models.CharField(max_length=128, blank=True, default="")
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="attendees")
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in pytz.all_timezones], default="UTC")
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = AttendeeManager()
+
+    USERNAME_FIELD = "id"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'event'], name='unique_name_in_event')
+        ]
+
 
     def __str__(self):
         return self.name
