@@ -27,15 +27,15 @@ def create_avalibility(attendee: Attendee, start_time, end_time):
     if end_time <= start_time:
         raise ValueError("End time must be after start time.")
 
-    availibility = Availability.objects.create(
+    availability = Availability.objects.create(
         attendee=attendee,
         start_time=start_time,
         end_time=end_time
         )
 
-    return availibility
+    return availability
 
-def get_existing_availibility(attendee: Attendee, start_time, end_time):
+def get_existing_availability(attendee: Attendee, start_time, end_time):
     return Availability.objects.filter(
         attendee=attendee,
         start_time=start_time,
@@ -50,8 +50,15 @@ def get_jwt_token(attendee):
         'access': str(refresh.access_token),
     }
 
-def get_attendee_availibility(attendee):
+def get_attendee_availability(attendee):
     return Availability.objects.filter(attendee=attendee)
 
-def get_event_availibilities(event):
+def get_event_availabilities(event):
     return Availability.objects.filter(attendee__event=event)
+
+def get_availabilities_by_start_time(event, query_time):
+    availabilities = Availability.objects.filter(
+        attendee__event=event,
+        start_time=query_time
+    ).select_related('attendee')
+    return availabilities

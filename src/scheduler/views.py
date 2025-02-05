@@ -1,3 +1,4 @@
+from django.utils.dateparse import parse_datetime
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -14,15 +15,16 @@ from scheduler.utils import(
     create_attendee,
     get_attendee_by_id,
     create_avalibility,
-    get_existing_availibility,
+    get_existing_availability,
     get_jwt_token,
-    get_attendee_availibility,
-    get_event_availibilities,
+    get_attendee_availability,
+    get_event_availabilities,
+    get_availabilities_by_start_time,
 )
 
 
 
-class CreateEventView(APIView):
+class EventView(APIView):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -55,19 +57,19 @@ class CreateEventView(APIView):
         time_zones = pytz.all_timezones
 
         attendee = request.user
-        attendee_availibilities = []
+        attendee_availabilities = []
 
         if attendee:
-            attendee_availibilities = get_attendee_availibility(attendee)
+            attendee_availabilities = get_attendee_availability(attendee)
 
-        all_event_availabilities = get_event_availibilities(event)
+        all_event_availabilities = get_event_availabilities(event)
 
         return Response({
             "timezone_options": time_zones,
             "attendee_timezone": attendee.timezone if attendee else None,
-            "attendee_availibilities": [
+            "attendee_availabilities": [
                 {"id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
-                for avail in attendee_availibilities
+                for avail in attendee_availabilities
             ],
             "all_event_availabilities": [
                 {"attendee": avail.attendee.name, "id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
@@ -131,7 +133,7 @@ class SignInEventView(APIView):
 
 
 
-class AttendeeAvailibilityView(APIView):
+class AttendeeavailabilityView(APIView):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -160,19 +162,43 @@ class AttendeeAvailibilityView(APIView):
             return Response({"error": "End time must be after start time."},
                              status=status.HTTP_400_BAD_REQUEST)
 
-        existing_availibility = get_existing_availibility(attendee, start_time, end_time)
-        if existing_availibility:
-            existing_availibility.delete()
-            return Response({"message": "Availibility successfully removed."}, status=status.HTTP_200_OK)
+        existing_availability = get_existing_availability(attendee, start_time, end_time)
+        if existing_availability:
+            existing_availability.delete()
+            return Response({"message": "availability successfully removed."}, status=status.HTTP_200_OK)
 
-        availibility = create_avalibility(attendee, start_time, end_time)
+        availability = create_avalibility(attendee, start_time, end_time)
 
         return Response({
             "message": "Availability successfully added.",
-            "availibility": {
-                "id": availibility.id,
-                "start_time": availibility.start_time,
-                "end_time": availibility.end_time
+            "availability": {
+                "id": availability.id,
+                "start_time": availability.start_time,
+                "end_time": availability.end_time
             }
         }, status=status.HTTP_201_CREATED)
+
+    def get(self, request, unique_id):
+        time_str = request.query_params.get('time')
+        if not time_str:
+            return Response({"error": "The 'time' query parameter  is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        query_time = parse_datetime(time_str)
+        if not query_time:
+            return Response({"error": "Invalid time format. Please use ISO 8601 format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if query_time.tzinfo is None:
+            query_time = pytz.UTC.localize(query_time)
+
+        event = get_event_by_unique_id(unique_id)
+        if not event:
+            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        availabilities = get_availabilities_by_start_time(event, query_time)
+
+        attendees = [{"name": avail.attendee.name} for avail in availabilities]
+
+        return Response({
+            "available_attendees": attendees
+        }, status=status.HTTP_200_OK)
 
