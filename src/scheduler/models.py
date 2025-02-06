@@ -1,10 +1,12 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.conf import settings
 import pytz
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from scheduler.managers import AttendeeManager
+
 
 
 class Event(models.Model):
@@ -15,7 +17,7 @@ class Event(models.Model):
     unique_id = models.UUIDField(default=uuid.uuid4, unique=True)
 
     def get_event_link(self):
-        return f"http://127.0.0.1:8000/{self.unique_id}"
+        return f"{settings.BASE_URL}/{self.unique_id}"
 
     def __str__(self):
         return self.name
