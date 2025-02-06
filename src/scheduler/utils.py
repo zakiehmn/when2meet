@@ -23,7 +23,7 @@ def create_attendee(event: Event, name: str, password="", timezone="UTC"):
 def get_attendee_by_id(event: Event, attendee_id):
     return get_object_or_404(Attendee, id=attendee_id, event=event)
 
-def create_avalibility(attendee: Attendee, start_time, end_time):
+def create_availability(attendee: Attendee, start_time, end_time):
     if end_time <= start_time:
         raise ValueError("End time must be after start time.")
 

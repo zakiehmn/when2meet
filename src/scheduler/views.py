@@ -14,7 +14,7 @@ from scheduler.utils import(
     get_attendee_by_event_and_name,
     create_attendee,
     get_attendee_by_id,
-    create_avalibility,
+    create_availability,
     get_existing_availability,
     get_jwt_token,
     get_attendee_availability,
@@ -142,39 +142,100 @@ class AttendeeAvailabilityView(APIView):
         attendee = request.user
         event = get_event_by_unique_id(unique_id)
 
-        if attendee.event != event:
-            return Response({"error": "You are not authorized to modify availability for this event."},
-                             status=status.HTTP_403_FORBIDDEN)
+        if not event:
+            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        if attendee.event != event:
+            return Response(
+                {"error": "You are not authorized to modify availability for this event."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         start_time_str = request.data.get("start_time")
         end_time_str = request.data.get("end_time")
 
         if not start_time_str or not end_time_str:
-            return Response({"error": "Start time and end time are required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Start time and end time are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             start_time = datetime.fromisoformat(start_time_str)
             end_time = datetime.fromisoformat(end_time_str)
         except ValueError:
-            return Response({"error": "Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)."})
+            return Response(
+                {"error": "Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if end_time <= start_time:
-            return Response({"error": "End time must be after start time."},
-                             status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "End time must be after start time."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         existing_availability = get_existing_availability(attendee, start_time, end_time)
         if existing_availability:
-            existing_availability.delete()
-            return Response({"message": "availability successfully removed."}, status=status.HTTP_200_OK)
+            avail = existing_availability
+            message = "Availability already exists."
+            status_code = status.HTTP_200_OK
+        else:
+            avail = create_availability(attendee, start_time, end_time)
+            message = "Availability successfully added."
+            status_code = status.HTTP_201_CREATED
 
-        availability = create_avalibility(attendee, start_time, end_time)
-
-        return Response({
-            "message": "Availability successfully added.",
+        response_data = {
+            "message": message,
             "availability": {
-                "id": availability.id,
-                "start_time": availability.start_time,
-                "end_time": availability.end_time
+                "id": avail.id,
+                "start_time": avail.start_time,
+                "end_time": avail.end_time
             }
-        }, status=status.HTTP_201_CREATED)
+        }
+
+        return Response(response_data, status=status_code)
+
+    def delete(self, request, unique_id):
+        attendee = request.user
+        event = get_event_by_unique_id(unique_id)
+
+        if not event:
+            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if attendee.event != event:
+            return Response(
+                {"error": "You are not authorized to modify availability for this event."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        start_time_str = request.data.get("start_time")
+        end_time_str = request.data.get("end_time")
+
+        if not start_time_str or not end_time_str:
+            return Response(
+                {"error": "Start time and end time are required for deletion."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            start_time = datetime.fromisoformat(start_time_str)
+            end_time = datetime.fromisoformat(end_time_str)
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use ISO 8601 format."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        existing_availability = get_existing_availability(attendee, start_time, end_time)
+        if not existing_availability:
+            return Response(
+                {"error": "No matching availability found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        existing_availability.delete()
+        return Response(
+            {"message": "Availability successfully removed."},
+            status=status.HTTP_200_OK
+        )
