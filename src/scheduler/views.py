@@ -178,28 +178,3 @@ class AttendeeAvailabilityView(APIView):
                 "end_time": availability.end_time
             }
         }, status=status.HTTP_201_CREATED)
-
-    def get(self, request, unique_id):
-        time_str = request.query_params.get('time')
-        if not time_str:
-            return Response({"error": "The 'time' query parameter  is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        query_time = parse_datetime(time_str)
-        if not query_time:
-            return Response({"error": "Invalid time format. Please use ISO 8601 format."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if query_time.tzinfo is None:
-            query_time = pytz.UTC.localize(query_time)
-
-        event = get_event_by_unique_id(unique_id)
-        if not event:
-            return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        availabilities = get_availabilities_by_start_time(event, query_time)
-
-        attendees = [{"name": avail.attendee.name} for avail in availabilities]
-
-        return Response({
-            "available_attendees": attendees
-        }, status=status.HTTP_200_OK)
-
