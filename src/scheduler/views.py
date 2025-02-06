@@ -66,7 +66,7 @@ class EventView(APIView):
 
         return Response({
             "timezone_options": time_zones,
-            "attendee_timezone": attendee.timezone if attendee else None,
+            "attendee_timezone": (attendee.timezone if attendee else None) or "Asia/Tehran",
             "attendee_availabilities": [
                 {"id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
                 for avail in attendee_availabilities
@@ -109,7 +109,6 @@ class SignInEventView(APIView):
         timezone = request.data.get('timezone', event.timezone)
 
         attendee = get_attendee_by_event_and_name(event, name)
-        is_new = False
 
         if attendee:
             if password:
@@ -118,19 +117,21 @@ class SignInEventView(APIView):
             else:
                 if attendee.has_usable_password():
                     return Response({"error": "Password required."}, status=status.HTTP_401_UNAUTHORIZED)
+            message = "Login successful!"
+            status_code = status.HTTP_200_OK
         else:
             attendee = create_attendee(event, name, password, timezone)
-            is_new = True
+            message = "Sign up successful!"
+            status_code = status.HTTP_201_CREATED
 
         tokens = get_jwt_token(attendee)
         serializer = AttendeeSerializer(attendee)
 
         return Response({
-            "message": "Sign up successful!" if is_new else "Login successful!",
+            "message": message,
             "attendee": serializer.data,
             **tokens,
-        }, status=status.HTTP_201_CREATED if is_new else status.HTTP_200_OK)
-
+        }, status=status_code)
 
 
 class AttendeeAvailabilityView(APIView):
