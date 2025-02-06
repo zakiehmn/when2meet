@@ -133,7 +133,7 @@ class SignInEventView(APIView):
 
 
 
-class AttendeeavailabilityView(APIView):
+class AttendeeAvailabilityView(APIView):
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
