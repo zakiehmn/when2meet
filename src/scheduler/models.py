@@ -48,6 +48,13 @@ class Attendee(AbstractBaseUser, PermissionsMixin):
             models.UniqueConstraint(fields=['name', 'event'], name='unique_name_in_event')
         ]
 
+    def validate_password(self, password):
+        if self.has_usable_password():
+            if not password:
+                return False, "Password required."
+            if not self.check_password(password):
+                return False, "Incorrect password."
+        return True, None
 
     def __str__(self):
         return self.name

@@ -35,9 +35,8 @@ class EventView(APIView):
         return super().get_authenticators()
 
     def get_permissions(self):
-        if self.request.method == "POST":
-            return [AllowAny()]
-        return super().get_permissions()
+
+        return [AllowAny()]
 
     def post(self, request):
         serializer = EventSerializer(data=request.data)
@@ -54,19 +53,26 @@ class EventView(APIView):
         if not event:
             return Response({"error": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        event_serializer = EventSerializer(event)
         time_zones = pytz.all_timezones
 
         attendee = request.user
         attendee_availabilities = []
 
-        if attendee:
+        if request.user.is_authenticated:
+            attendee = request.user
             attendee_availabilities = get_attendee_availability(attendee)
+            attendee_timezone = attendee.timezone if attendee.timezone else "Asia/Tehran"
+        else:
+            attendee_availabilities = []
+            attendee_timezone = "Asia/Tehran"
 
         all_event_availabilities = get_event_availabilities(event)
 
         return Response({
+            "event": event_serializer.data,
             "timezone_options": time_zones,
-            "attendee_timezone": (attendee.timezone if attendee else None) or "Asia/Tehran",
+            "attendee_timezone": attendee_timezone,
             "attendee_availabilities": [
                 {"id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
                 for avail in attendee_availabilities
@@ -75,7 +81,7 @@ class EventView(APIView):
                 {"attendee": avail.attendee.name, "id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
                 for avail in all_event_availabilities
             ]
-        })
+        }, status=status.HTTP_200_OK)
 
 
 
@@ -111,12 +117,9 @@ class SignInEventView(APIView):
         attendee = get_attendee_by_event_and_name(event, name)
 
         if attendee:
-            if password:
-                if not attendee.check_password(password):
-                    return Response({"error": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
-            else:
-                if attendee.has_usable_password():
-                    return Response({"error": "Password required."}, status=status.HTTP_401_UNAUTHORIZED)
+            valid, error = attendee.validate_password(password)
+            if not valid:
+                return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
             message = "Login successful!"
             status_code = status.HTTP_200_OK
         else:
