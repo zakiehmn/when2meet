@@ -13,13 +13,12 @@ from scheduler.utils import(
     get_event_by_unique_id,
     get_attendee_by_event_and_name,
     create_attendee,
-    get_attendee_by_id,
     create_availability,
     get_existing_availability,
     get_jwt_token,
     get_attendee_availability,
     get_event_availabilities,
-    get_availabilities_by_start_time,
+    get_attendees_availability_count,
 )
 
 
@@ -69,8 +68,10 @@ class EventView(APIView):
 
         all_event_availabilities = get_event_availabilities(event)
 
+
         return Response({
             "event": event_serializer.data,
+            "attendees_with_availability_count": get_attendees_availability_count(event),
             "timezone_options": time_zones,
             "attendee_timezone": attendee_timezone,
             "attendee_availabilities": [
@@ -78,7 +79,9 @@ class EventView(APIView):
                 for avail in attendee_availabilities
             ],
             "all_event_availabilities": [
-                {"attendee": avail.attendee.name, "id": avail.id, "start_time": avail.start_time, "end_time": avail.end_time}
+                {"attendee": avail.attendee.name,
+                "id": avail.id, "start_time": avail.start_time,
+                "end_time": avail.end_time}
                 for avail in all_event_availabilities
             ]
         }, status=status.HTTP_200_OK)

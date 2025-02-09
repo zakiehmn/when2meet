@@ -67,9 +67,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOWED_ORIGINS = [
-    "http://192.168.100.5",  # Replace with frontend laptop's IP
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://192.168.100.5",  # Replace with frontend laptop's IP
+# ]
 
 CORS_ALLOW_ALL_ORIGINS = True
 

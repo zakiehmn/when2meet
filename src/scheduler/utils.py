@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from scheduler.models import Event, Attendee, Availability
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.tokens import RefreshToken
+from collections import Counter
 
 
 def get_event_by_unique_id(unique_id):
@@ -19,9 +20,6 @@ def create_attendee(event: Event, name: str, password="", timezone="UTC"):
     attendee.save()
     return attendee
 
-
-def get_attendee_by_id(event: Event, attendee_id):
-    return get_object_or_404(Attendee, id=attendee_id, event=event)
 
 def create_availability(attendee: Attendee, start_time, end_time):
     if end_time <= start_time:
@@ -56,9 +54,9 @@ def get_attendee_availability(attendee):
 def get_event_availabilities(event):
     return Availability.objects.filter(attendee__event=event)
 
-def get_availabilities_by_start_time(event, query_time):
-    availabilities = Availability.objects.filter(
-        attendee__event=event,
-        start_time=query_time
-    ).select_related('attendee')
-    return availabilities
+def get_attendees_availability_count(event):
+    """Returns the unique count of attendees with at least one Availability for the event."""
+    return Availability.objects.filter(
+        attendee__event=event
+    ).values('attendee').distinct().count()
+
