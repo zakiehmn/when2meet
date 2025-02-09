@@ -3,6 +3,8 @@ from scheduler.models import Event, Attendee, Availability
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.tokens import RefreshToken
 from collections import Counter
+from datetime import datetime
+import pytz
 
 
 def get_event_by_unique_id(unique_id):
@@ -43,9 +45,13 @@ def get_existing_availability(attendee: Attendee, start_time, end_time):
 def get_jwt_token(attendee):
     refresh = RefreshToken.for_user(attendee)
     refresh['name'] = attendee.name
+    access_token = refresh.access_token
+    expiry_timestamp = access_token["exp"]
+    expiry_datetime = datetime.fromtimestamp(expiry_timestamp, tz=pytz.UTC)
     return {
         'refresh': str(refresh),
-        'access': str(refresh.access_token),
+        'access': str(access_token),
+        'access_expires': expiry_datetime.isoformat(),
     }
 
 def get_attendee_availability(attendee):

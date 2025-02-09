@@ -8,6 +8,9 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from scheduler.managers import AttendeeManager
 
 
+class EventTypeChoices(models.IntegerChoices):
+    SPECIFIC_DATES = 0, "Specific Dates"
+    DAYS_OF_WEEK = 1, "Days of Week"
 
 class Event(models.Model):
     name = models.CharField(max_length=50)
@@ -15,6 +18,7 @@ class Event(models.Model):
     end_time = models.TimeField()
     timezone = models.CharField(max_length=50, choices=[(tz, tz) for tz in pytz.all_timezones], default="UTC")
     unique_id = models.UUIDField(default=uuid.uuid4, unique=True)
+    event_type = models.IntegerField(choices=EventTypeChoices.choices)
 
     def get_event_link(self):
         return f"{settings.BASE_URL}/{self.unique_id}"
@@ -30,6 +34,21 @@ class EventDate(models.Model):
     def __str__(self):
         return f"{self.event.name} - {self.date}"
 
+class DayOfWeekChoices(models.IntegerChoices):
+    MONDAY = 0, "دوشنبه"
+    TUESDAY = 1, "سه‌شنبه"
+    WEDNESDAY = 2, "چهارشنبه"
+    THURSDAY = 3, "پنج‌شنبه"
+    FRIDAY = 4, "جمعه"
+    SATURDAY = 5, "شنبه"
+    SUNDAY = 6, "یکشنبه"
+
+class EventDayOfWeek(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="days_of_week")
+    day = models.IntegerField(choices=DayOfWeekChoices.choices)
+
+    def __str__(self):
+        return f"{self.event.name} - {DayOfWeekChoices(self.day).label}"
 
 class Attendee(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=30)

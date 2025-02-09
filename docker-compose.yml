@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django
+    command: ./entrypoint.sh
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
