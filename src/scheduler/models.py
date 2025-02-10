@@ -47,6 +47,9 @@ class EventDayOfWeek(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="days_of_week")
     day = models.IntegerField(choices=DayOfWeekChoices.choices)
 
+    def get_day_label(self):
+        return DayOfWeekChoices(self.day).label
+
     def __str__(self):
         return f"{self.event.name} - {DayOfWeekChoices(self.day).label}"
 
@@ -79,13 +82,13 @@ class Attendee(AbstractBaseUser, PermissionsMixin):
         return self.name
 
 
-class Availability(models.Model):
-    attendee = models.ForeignKey(Attendee, on_delete=models.CASCADE, related_name="availability_times")
+class SpecificDateAvailability(models.Model):
+    attendee = models.ForeignKey(Attendee, on_delete=models.CASCADE, related_name="specific_date_availabilities")
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['attendee', 'start_time'], name='unique_attendee_start_time')]
+        constraints = [models.UniqueConstraint(fields=['attendee', 'start_time'], name='unique_attendee_specific_date_time')]
 
     def clean(self):
         if self.start_time >= self.end_time:
@@ -93,3 +96,27 @@ class Availability(models.Model):
 
     def __str__(self):
         return f"{self.attendee.name}: {self.start_time} - {self.end_time}"
+
+
+class DayOfWeekAvailability(models.Model):
+    attendee = models.ForeignKey(Attendee, on_delete=models.CASCADE, related_name="day_of_week_availabilities")
+    event_day_of_week = models.ForeignKey(EventDayOfWeek, on_delete=models.CASCADE, related_name="availabilities")
+    start_hour = models.IntegerField(choices=[(i, f"{i}:00") for i in range(24)])
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['attendee', 'event_day_of_week', 'start_hour'], name='unique_attendee_day_of_week_time')
+        ]
+
+    def clean(self):
+        if self.start_hour < 0 or self.start_hour > 23:
+            raise ValidationError("Hour must be between 0 and 23.")
+
+    def get_formated_start_hour(self):
+        if self.start_hour < 10:
+            return f"0{self.start_hour}:00"
+        return f"{self.start_hour}:00"
+
+    def __str__(self):
+        start_time = f"{self.start_hour}:00"
+        return f"{self.attendee.name}: {DayOfWeekChoices(self.event_day_of_week.day).label} - {start_time}"

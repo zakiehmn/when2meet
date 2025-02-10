@@ -3,7 +3,7 @@ from scheduler.models import (
     Event,
     EventDate,
     Attendee,
-    Availability,
+    SpecificDateAvailability,
     EventDayOfWeek,
     DayOfWeekChoices,
     EventTypeChoices,
@@ -83,12 +83,14 @@ class EventSerializer(serializers.ModelSerializer):
         for date_data in dates_data:
             EventDate.objects.create(event=event, **date_data)
         for day_data in days_data:
-            EventDayOfWeek.objects.create(event=event, **day_data)
+            e = EventDayOfWeek.objects.create(event=event, **day_data)
+            print(e)
         return event
+
 
 class AvailibilitySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Availability
+        model = SpecificDateAvailability
         fields = ['start_time', 'end_time']
 
 
@@ -97,4 +99,14 @@ class AttendeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendee
         fields = ['id', 'name', 'availibility_times']
+
+class EventDayOfWeekSerializer(serializers.ModelSerializer):
+    day_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventDayOfWeek
+        fields = ['day', 'day_label']
+
+    def get_day_label(self, obj):
+        return obj.get_day_display()
 
