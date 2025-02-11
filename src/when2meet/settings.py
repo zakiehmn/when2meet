@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import os
 
 from pathlib import Path
 
@@ -20,12 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=2ig10k+qb0q)aia^y3!w3xzao0m^^ef_juaevd7!@2!7+bvdq'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["192.168.100.110","172.20.10.3", "127.0.0.1"]
+DEBUG = os.getenv("DEBUG") == "True"
+ALLOWED_HOSTS = ["0.0.0.0", "127.0.0.1", os.getenv("ALLOWED_HOSTS")]
 
 
 # Application definition
@@ -68,11 +68,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.100.5",  # Replace with frontend laptop's IP
-    # "http://172.20.10.2",
+    os.getenv("FRONT_URL"),
 ]
-
-CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'when2meet.urls'
 
@@ -101,7 +98,7 @@ WSGI_APPLICATION = 'when2meet.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db' / 'db.sqlite3',
     }
 }
 
@@ -149,4 +146,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "scheduler.Attendee"
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = os.getenv("FRONT_URL")

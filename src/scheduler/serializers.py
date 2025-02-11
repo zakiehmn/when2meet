@@ -88,14 +88,14 @@ class EventSerializer(serializers.ModelSerializer):
         return event
 
 
-class AvailibilitySerializer(serializers.ModelSerializer):
+class SpecificAvailibilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecificDateAvailability
         fields = ['start_time', 'end_time']
 
 
 class AttendeeSerializer(serializers.ModelSerializer):
-    availibility_times = AvailibilitySerializer(many=True, read_only=True)
+    availibility_times = SpecificAvailibilitySerializer(many=True, read_only=True)
     class Meta:
         model = Attendee
         fields = ['id', 'name', 'availibility_times']

@@ -1,15 +1,37 @@
 version: '3.8'
 
 services:
-
-  django:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: django
+  backend:
+    image: ghcr.io/zakiehmn/django-app:$TAG_NAME
+    environment:
+      - FRONT_URL="https://www.hamahangsho.ir"
+      - ALLOWED_HOSTS="https://api.hamahangsho.ir"
+      - SECRET_KEY=$SECRET_KEY
+      - DEBUG="False"
     command: ./entrypoint.sh
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - sqlite_data:/app/db
 
+  frontend:
+    image: ghcr.io/elnazbashirian/front:$TAG_NAME
+    container_name: vue_app
+    ports:
+      - "8080:80"
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  sqlite_data:
