@@ -7,7 +7,7 @@ services:
       - FRONT_URL="https://www.hamahangsho.ir"
       - ALLOWED_HOSTS="https://api.hamahangsho.ir"
       - SECRET_KEY=$SECRET_KEY
-      - DEBUG="False"
+      - DEBUG="True"
     command: ./entrypoint.sh
     ports:
       - "8000:8000"
@@ -21,17 +21,6 @@ services:
       - "8080:80"
     restart: always
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx_proxy
-    ports:
-      - "80:80"
-    volumes:
-      - ./conf.d:/etc/nginx/conf.d
-    restart: always
-    depends_on:
-      - frontend
-      - backend
 
 volumes:
   sqlite_data:

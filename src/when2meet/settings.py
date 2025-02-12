@@ -67,9 +67,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOWED_ORIGINS = [
-    os.getenv("FRONT_URL"),
-]
+CORS_ALLOWED_ORIGINS = os.getenv("FRONT_URL").split(',')
 
 ROOT_URLCONF = 'when2meet.urls'
 
